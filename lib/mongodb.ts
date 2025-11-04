@@ -1,82 +1,70 @@
+// lib/mongodb.ts
 /**
- * lib/mongodb.ts
- *
- * Configuración de conexión a MongoDB usando Mongoose y TypeScript.
- * - Evita `any` usando los tipos que exporta Mongoose.
- * - Usa un caché en `global` para reusar la conexión durante hot-reloads
- *   (necesario en entornos como Next.js / dev servers que recargan módulos).
- * - Exporta la función `connectToDatabase` que retorna la conexión activa
- *   tipada como `mongoose.Connection`.
- *
- * Comentarios en cada bloque explican la razón y el comportamiento.
+ * Conexión a MongoDB con Mongoose (TypeScript)
+ * - Usa MONGODB_URI desde env
+ * - Caché en global._mongoose para evitar múltiples conexiones en dev
+ * - Retorna mongoose.Connection y exporta la instancia `mongoose`
+ * - Resetea la promesa en caso de fallo para permitir reintentos
  */
 
 import mongoose from 'mongoose';
 
-// Leemos la URI desde variables de entorno. Lanzamos un error claro si no está.
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
-  // Esto falla pronto y con mensaje claro si olvidas añadir la variable.
   throw new Error('Please define the MONGODB_URI environment variable inside .env');
 }
 
 /**
- * Extendemos el tipo global para añadir nuestro caché de Mongoose.
- *
- * Usamos `global` (en Node) para mantener la conexión entre recargas de módulos
- * en desarrollo. Esto evita crear muchas conexiones simultáneas al servidor
- * de MongoDB durante el hot-reload.
+ * Cache almacenado en `global` para persistir entre hot-reloads en dev.
+ * Nombramos la propiedad `_mongoose` para evitar confusiones con la importación `mongoose`.
  */
 declare global {
-  // Añadimos una propiedad `_mongoose` a `NodeJS.Global` para el caché.
-  // No usamos `any` — tipamos la estructura explícitamente.
-  // `mongoose.Mongoose` representa la instancia principal retornada por `mongoose.connect`.
+  // Añadimos la interfaz para la propiedad global usada por el caché
+  // `conn` guarda la conexión activa, `promise` guarda la promesa en curso.
   var _mongoose: {
     conn: mongoose.Connection | null;
     promise: Promise<mongoose.Mongoose> | null;
   } | undefined;
 }
 
-// Inicializamos (o reutilizamos) el caché en `global`.
-// El operador de asignación `??=` garantiza que sólo se cree si no existe.
+// Inicializamos el caché si no existe (operador moderno `??=`).
 global._mongoose ??= { conn: null, promise: null };
 
 /**
- * Conecta a la base de datos y retorna la conexión activa.
- *
- * Comportamiento:
- * - Si ya existe `global._mongoose.conn` la retorna inmediatamente.
- * - Si hay una promesa en curso (`global._mongoose.promise`) espera a que termine.
- * - Si no hay nada, inicia `mongoose.connect(...)` y guarda la promesa en caché.
- *
- * Esto garantiza que, aun con múltiples llamadas concurrentes durante el inicio
- * de la aplicación, se reutilice la misma promesa/conexión en vez de crear
- * múltiples conexiones paralelas.
+ * Conecta y retorna la conexión (`mongoose.Connection`).
+ * - Reusa `global._mongoose.conn` si ya existe.
+ * - Reusa `global._mongoose.promise` si hay una conexión en curso.
+ * - Guarda la promesa en el caché para evitar múltiples intentos paralelos.
  */
 export async function connectToDatabase(): Promise<mongoose.Connection> {
-  // Si ya hay una conexión activa, la retornamos.
+  // 1) Si ya hay una conexión activa, retornarla inmediatamente.
   if (global._mongoose?.conn) {
     return global._mongoose.conn;
   }
 
-  // Si no hay promesa en curso, creamos una y la guardamos en el caché.
+  // 2) Si no hay promesa en curso, crearla y cachearla.
   if (!global._mongoose?.promise) {
-  // mongoose.connect devuelve Promise<mongoose.Mongoose>
-  // Usamos el operador non-null (!) porque ya hemos validado arriba que
-  // `MONGODB_URI` existe; esto evita avisos del compilador sobre `undefined`.
-  global._mongoose!.promise = mongoose.connect(MONGODB_URI!);
+    // Puedes añadir opciones tipadas si las necesitas:
+    // const options: mongoose.ConnectOptions = { bufferCommands: false };
+    // global._mongoose.promise = mongoose.connect(MONGODB_URI, options);
+    global._mongoose!.promise = mongoose.connect(MONGODB_URI!);
   }
 
-  // Esperamos a que la promesa de conexión resuelva y guardamos la conexión.
-  const mongooseInstance = await global._mongoose!.promise;
-  global._mongoose!.conn = mongooseInstance.connection;
-
-  // Retornamos la conexión tipada como mongoose.Connection.
-  return global._mongoose!.conn;
+  try {
+    // 3) Esperar a que la promesa resuelva y conservar la conexión.
+    const mongooseInstance = await global._mongoose!.promise;
+    global._mongoose!.conn = mongooseInstance.connection;
+    return global._mongoose!.conn;
+  } catch (error) {
+    // 4) Si falló la conexión, limpiar la promesa cacheada para permitir reintentos.
+    global._mongoose!.promise = null;
+    throw error;
+  }
 }
 
 /**
- * Exportamos la instancia de mongoose por si otros módulos necesitan acceso
- * directo a métodos estáticos (por ejemplo para crear modelos con `mongoose.model`).
+ * Exportar la instancia `mongoose` es útil para registrar modelos en otros módulos:
+ * import { mongoose, connectToDatabase } from '@/lib/mongodb';
  */
 export { mongoose };
+

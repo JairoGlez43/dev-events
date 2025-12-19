@@ -1,17 +1,11 @@
+import { EventAttrs } from "@/database/event.model"
 import Image from "next/image"
 import Link from "next/link"
 
-interface Props{
-    title: string, 
-    image: string,
-    location: string,
-    date: string,
-    time: string,
-}
-
-const EventCard = ({title, image, location, date, time}: Props) => {
-  return (
-    <Link href={'/event'} id="event-card">
+const EventCard = ({title, image, location, date, time, slug}: EventAttrs) => {
+    console.log(title,image, location, date, time, slug);
+    return (
+    <Link href={`/event/${slug}`} id="event-card">
         <Image src={image} alt={title} width={410} height={300} className="poster"/>
         <div className="flex gap-2">
             <Image src={'/icons/pin.svg'} alt="Location pin" width={14} height={14}/>
@@ -32,4 +26,4 @@ const EventCard = ({title, image, location, date, time}: Props) => {
   )
 }
 
-export default EventCard
+export default EventCard;

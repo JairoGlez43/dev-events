@@ -82,7 +82,9 @@ const EventSchema = new mongoose.Schema<EventDocument>(
         message: 'title cannot be empty',
       },
     },
-    slug: { type: String, required: true, unique: true, index: true },
+  // `slug` es único y tiene un índice — definimos el índice explícitamente
+  // más abajo con `EventSchema.index(...)` para evitar duplicados.
+  slug: { type: String, required: true },
     description: {
       type: String,
       required: [true, 'description is required'],

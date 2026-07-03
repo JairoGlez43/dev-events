@@ -1,7 +1,7 @@
 import EventCard from "@/components/EventCard";
 import ExploreBtn from "@/components/ExploreBtn";
 import { EventAttrs } from "@/database/event.model";
-import { cacheLife } from "next/dist/server/use-cache/cache-life";
+import { cacheLife } from 'next/cache';
 //import events from "@/lib/constants";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';

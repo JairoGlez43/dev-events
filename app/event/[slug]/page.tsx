@@ -1,11 +1,11 @@
 import BookEvent from "@/components/BookEvent";
 import EventCard from "@/components/EventCard";
+import { Event } from "@/database";
 import { EventAttrs } from "@/database/event.model";
 import { getSimilarEventsBySlug } from "@/lib/actions/event.actions";
+import { connectToDatabase } from "@/lib/mongodb";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 
 const EventDetailsIcon = ({icon, alt, label}: {icon:string, alt:string, label: string}) => (
     <div className="flex gap-2 items-center"> 
@@ -37,12 +37,14 @@ const EventTags = ({tags}: {tags: string[]})=>(
 const EventDetails = async ({ params }: { params: Promise<{ slug: string }> }) => {
 
     const {slug} =  await params;
-    //console.log('Fetching event details for slug:', slug);
-    const res = await fetch(`${BASE_URL}/api/events/${slug}`);
-    if(!res.ok){
+    await connectToDatabase();
+
+    const event = await Event.findOne({ slug }).lean().exec();
+    if(!event){
         return notFound();
-    }        
-    const {event: {description, mode, overview, image, date, time, location, audience, agenda, organizer, tags}} = await res.json();
+    }
+
+    const {description, mode, overview, image, date, time, location, audience, agenda, organizer, tags} = JSON.parse(JSON.stringify(event)) as EventAttrs;
     //console.log(tags);
     const booking = 10;
       

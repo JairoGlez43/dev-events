@@ -1,36 +1,21 @@
 import EventCard from "@/components/EventCard";
 import ExploreBtn from "@/components/ExploreBtn";
 import { EventAttrs } from "@/database/event.model";
+import { connectToDatabase } from "@/lib/mongodb";
+import { Event } from "@/database";
 import { cacheLife } from 'next/cache';
-//import events from "@/lib/constants";
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
 export default async function Home() {
-  // Fetch events from our API with robust error handling. We use a
-  // relative fallback BASE_URL but still guard against network or
-  // server errors and unexpected payload shapes.
   'use cache';
+  cacheLife('hours');
   let events: EventAttrs[] = [];
-  try {
-    const res = await fetch(`${BASE_URL}/api/events`);
-    if (!res.ok) {
-      // Log and fall back to empty list on non-2xx responses.
-      // In production you might surface a UI message instead.
-      console.error(`Failed to fetch events: ${res.status} ${res.statusText}`);
-    } else {
-      cacheLife("hours");
-      const payload = await res.json();
-      // Validate payload shape: must have events array
-      if (payload && Array.isArray(payload.events)) {
-        events = payload.events as EventAttrs[];
-      } else {
-        console.warn('Unexpected events payload shape, expected { events: [] }', payload);
-      }
-    }
+   try {
+    await connectToDatabase();
+    const docs = await Event.find({}).sort({ createdAt: -1 }).lean().exec();
+    // Serializar (ObjectId, Dates) para poder pasar los datos a componentes cliente
+    events = JSON.parse(JSON.stringify(docs));
   } catch (err) {
-    // Network or parsing error: log and continue with empty events array
-    console.error('Error fetching events:', err);
+    console.error("Error fetching events:", err);
   }
 
   console.log(events);

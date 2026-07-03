@@ -84,7 +84,7 @@ const EventSchema = new mongoose.Schema<EventDocument>(
     },
   // `slug` es único y tiene un índice — definimos el índice explícitamente
   // más abajo con `EventSchema.index(...)` para evitar duplicados.
-  slug: { type: String, required: true },
+  slug: { type: String },
     description: {
       type: String,
       required: [true, 'description is required'],

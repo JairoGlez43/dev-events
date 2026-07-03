@@ -11,7 +11,6 @@ export default async function Home() {
   // relative fallback BASE_URL but still guard against network or
   // server errors and unexpected payload shapes.
   'use cache';
-  cacheLife("hours");
   let events: EventAttrs[] = [];
   try {
     const res = await fetch(`${BASE_URL}/api/events`);
@@ -20,6 +19,7 @@ export default async function Home() {
       // In production you might surface a UI message instead.
       console.error(`Failed to fetch events: ${res.status} ${res.statusText}`);
     } else {
+      cacheLife("hours");
       const payload = await res.json();
       // Validate payload shape: must have events array
       if (payload && Array.isArray(payload.events)) {
@@ -32,6 +32,8 @@ export default async function Home() {
     // Network or parsing error: log and continue with empty events array
     console.error('Error fetching events:', err);
   }
+
+  console.log(events);
   return (
     <section>
       <h1 className="text-center">

@@ -16,6 +16,7 @@ export interface EventAttrs {
   agenda: string[];
   organizer: string;
   tags: string[];
+  capacity: number;
 }
 
 export interface EventDocument extends mongoose.Document, EventAttrs {
@@ -115,9 +116,10 @@ const EventSchema = new mongoose.Schema<EventDocument>(
         message: 'tags must be a non-empty array of strings',
       },
     },
+    capacity: { type: Number, required: [true, 'capacity is required'], min: [1, 'capacity must be a positive number'] },
   },
   {
-    timestamps: true, // crea createdAt y updatedAt automáticamente
+    timestamps: true,
     strict: true,
   }
 );

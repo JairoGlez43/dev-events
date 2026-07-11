@@ -20,7 +20,7 @@ const BookingSchema = new mongoose.Schema<BookingDocument>(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Event',
       required: [true, 'eventId is required'],
-      index: true, // índice para consultas rápidas por evento
+      index: true,
     },
     email: {
       type: String,
@@ -37,7 +37,7 @@ const BookingSchema = new mongoose.Schema<BookingDocument>(
     strict: true,
   }
 );
-
+BookingSchema.index({ eventId: 1, email: 1 }, { unique: true });
 // Pre-save: verificar que el eventId referenciado existe.
 BookingSchema.pre<BookingDocument>('save', async function () {
   // Comprobamos existencia del evento; lanzamos si no existe.

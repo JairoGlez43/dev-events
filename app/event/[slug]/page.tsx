@@ -9,7 +9,7 @@ import { notFound } from "next/navigation";
 
 const EventDetailsIcon = ({icon, alt, label}: {icon:string, alt:string, label: string}) => (
     <div className="flex gap-2 items-center"> 
-        <Image src={icon} alt={alt} height={17} width={17}/>
+        <Image src={icon} alt={alt} height={17} width={17} className="size-[17px]"/>
         <p>{label}</p>
     </div>
 )
@@ -44,13 +44,11 @@ const EventDetails = async ({ params }: { params: Promise<{ slug: string }> }) =
         return notFound();
     }
 
-    const {description, mode, overview, image, date, time, location, audience, agenda, organizer, tags} = JSON.parse(JSON.stringify(event)) as EventAttrs;
+    const {description, mode, overview, image, date, time, location, audience, agenda, organizer, tags, capacity} = JSON.parse(JSON.stringify(event)) as EventAttrs;
     //console.log(tags);
-    const booking = 10;
-      
+    const reservations = await Event.countDocuments({ slug });
+    const booking = capacity?? 0 - reservations;
     const similarEvents: EventAttrs[] = await getSimilarEventsBySlug(slug);
-    //console.log('Similar Events:', similarEvents);
-
     return (
         <section id="event">
             <div className="header">
@@ -92,7 +90,7 @@ const EventDetails = async ({ params }: { params: Promise<{ slug: string }> }) =
                         ) : (
                             <p className="text-sm">Sold Out</p>
                         )}
-                        <BookEvent />
+                        <BookEvent slug={slug} />
                     </div>
                 </aside>
             </div>

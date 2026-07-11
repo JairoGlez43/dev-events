@@ -2,23 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { Event } from '@/database';
 import type { EventDocument } from '@/database/event.model';
-
-/**
- * GET /api/events/[slug]
- * - Valida y normaliza el parámetro `slug`.
- * - Asegura conexión con la base de datos.
- * - Busca el evento por `slug` y devuelve JSON con status adecuados.
- */
 export async function GET(
   _req: NextRequest,
   context: { params: { slug?: string | string[] } | Promise<{ slug: string }> }
 ) {
-  // Next.js typing can expose `context.params` as a Promise in some dev/build
-  // generated types. A compatible approach is aceptar ambos: un objeto o una
-  // promesa que resuelva a un objeto.
   const resolvedParams = await (context.params instanceof Promise ? context.params : Promise.resolve(context.params));
   const raw = resolvedParams?.slug;
-  // --- 1) Validación del parámetro `slug` ---
   if (!raw) {
     return NextResponse.json({ error: 'Missing slug parameter' }, { status: 400 });
   }
@@ -31,12 +20,8 @@ export async function GET(
   }
 
   try {
-    // --- 2) Conexión a la base de datos ---
+    
     await connectToDatabase();
-
-    // --- 3) Búsqueda del evento ---
-    // Retornamos el documento Mongoose (serializable). Usamos exec() para
-    // obtener una Promise clara y manejo de errores consistente.
     const event: EventDocument | null = await Event.findOne({ slug }).exec();
 
     if (!event) {
